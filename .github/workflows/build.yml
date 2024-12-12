@@ -27,8 +27,11 @@ jobs:
 
     - name: Setup Server
       run: |
+        echo "Current PATH: $PATH"
+        export PATH="$PATH:$(ruby -e 'puts Gem.user_dir')/bin"
+        echo "Updated PATH: $PATH"
         cd server
-        bundle install --path vendor/bundle
+        $(ruby -e 'puts Gem.user_dir')/bin/bundle install --path vendor/bundle
 
     - name: Build Client
       run: |
