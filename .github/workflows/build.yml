@@ -7,10 +7,10 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:  # Для ручного запуска
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,6 +27,9 @@ jobs:
 
     - name: Setup Server
       run: |
+        echo "Current PATH: $PATH"
+        export PATH="$PATH:$(ruby -e 'puts Gem.user_dir')/bin"
+        echo "Updated PATH: $PATH"
         cd server
         $(ruby -e 'puts Gem.user_dir')/bin/bundle install --path vendor/bundle
 
@@ -35,15 +38,31 @@ jobs:
         cd client
         make
 
-    - name: Debug Client Directory
-      run: |
-        echo "Contents of client directory:"
-        ls -l client
-        echo "Recursive contents of client directory:"
-        ls -R client
-
-    - name: Upload Client Binary
+    - name: Upload Linux Client Binary
       uses: actions/upload-artifact@v4
       with:
-        name: dnscat2-client
+        name: dnscat2-client-linux
         path: client/dnscat
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        choco install make mingw -y
+        set PATH=C:\MinGW\bin;%PATH%
+
+    - name: Build Client
+      run: |
+        cd client
+        make -f Makefile.win
+
+    - name: Upload Windows Client Binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: dnscat2-client-windows
+        path: client/dnscat2-client.exe
