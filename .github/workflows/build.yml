@@ -52,15 +52,25 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install Dependencies
+      shell: pwsh
       run: |
         # Скачать MinGW
-        Invoke-WebRequest -Uri "https://github.com/niXman/mingw-builds-binaries/releases/download/13.2.0-rt_v11-rev0/x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0.7z" -OutFile "C:\\Temp\\mingw.7z"
+        $tempPath = "C:\\Temp\\mingw.7z"
+        $destPath = "C:\\MinGW"
+        Invoke-WebRequest -Uri "https://github.com/niXman/mingw-builds-binaries/releases/download/13.2.0-rt_v11-rev0/x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0.7z" -OutFile $tempPath
         
         # Распаковать MinGW
-        Expand-Archive -Path "C:\\Temp\\mingw.7z" -DestinationPath "C:\\MinGW"
+        Expand-Archive -Path $tempPath -DestinationPath $destPath
+        
+        # Убедиться, что директория bin существует
+        $binPath = "$destPath\\bin"
+        if (-Not (Test-Path $binPath)) {
+            Write-Error "Directory $binPath does not exist after extraction!"
+            exit 1
+        }
         
         # Обновить PATH
-        $env:PATH = "C:\\MinGW\\bin;" + $env:PATH
+        $env:PATH = "$binPath;" + $env:PATH
         [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH, [System.EnvironmentVariableTarget]::Process)
         Write-Host "PATH updated: $env:PATH"
     
@@ -76,6 +86,7 @@ jobs:
         Write-Host "GCC and Make are available."
 
     - name: Build Client
+      shell: pwsh
       run: |
         cd client
         make -f Makefile.win
