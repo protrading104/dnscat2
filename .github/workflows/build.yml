@@ -19,11 +19,10 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential ruby-dev gcc make
-        gem install bundler --user-install
-        export PATH="$PATH:$(ruby -e 'puts Gem.user_dir')/bin"
-        echo 'export PATH="$PATH:$(ruby -e "puts Gem.user_dir")/bin"' >> $GITHUB_ENV
+        choco install make mingw -y
+        $env:PATH = "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;" + $env:PATH
+        [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH, [System.EnvironmentVariableTarget]::Process)
+
 
     - name: Setup Server
       run: |
