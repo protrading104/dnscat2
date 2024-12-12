@@ -21,21 +21,20 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential ruby-dev gcc make
+        gem install bundler
 
-    - name: Build Server
+    - name: Setup Server
       run: |
         cd server
-        make
+        bundle install
 
     - name: Build Client
       run: |
         cd client
         make
 
-    - name: Upload Binaries
+    - name: Upload Client Binary
       uses: actions/upload-artifact@v4
       with:
-        name: dnscat2-binaries
-        path: |
-          server/dnscat2-server
-          client/dnscat2
+        name: dnscat2-client
+        path: client/dnscat2-client
