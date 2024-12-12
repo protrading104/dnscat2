@@ -54,13 +54,13 @@ jobs:
     - name: Install Dependencies
       run: |
         # Скачать MinGW
-        Invoke-WebRequest -Uri "https://github.com/niXman/mingw-builds-binaries/releases/download/13.2.0-rt_v11-rev0/x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0.7z" -OutFile "C:\Temp\mingw.7z"
+        Invoke-WebRequest -Uri "https://github.com/niXman/mingw-builds-binaries/releases/download/13.2.0-rt_v11-rev0/x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0.7z" -OutFile "C:\\Temp\\mingw.7z"
         
         # Распаковать MinGW
-        Expand-Archive -Path "C:\Temp\mingw.7z" -DestinationPath "C:\MinGW"
+        Expand-Archive -Path "C:\\Temp\\mingw.7z" -DestinationPath "C:\\MinGW"
         
         # Обновить PATH
-        $env:PATH = "C:\MinGW\bin;" + $env:PATH
+        $env:PATH = "C:\\MinGW\\bin;" + $env:PATH
         [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH, [System.EnvironmentVariableTarget]::Process)
         Write-Host "PATH updated: $env:PATH"
     
@@ -74,15 +74,14 @@ jobs:
             exit 1
         }
         Write-Host "GCC and Make are available."
-    
-    
-        - name: Build Client
-          run: |
-            cd client
-            make -f Makefile.win
-    
-        - name: Upload Windows Client Binary
-          uses: actions/upload-artifact@v4
-          with:
-            name: dnscat2-client-windows
-            path: client/dnscat2-client.exe
+
+    - name: Build Client
+      run: |
+        cd client
+        make -f Makefile.win
+
+    - name: Upload Windows Client Binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: dnscat2-client-windows
+        path: client/dnscat2-client.exe
