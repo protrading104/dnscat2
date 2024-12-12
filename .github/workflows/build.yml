@@ -1,0 +1,41 @@
+name: Build dnscat2
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:  # Для ручного запуска
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential ruby-dev gcc make
+
+    - name: Build Server
+      run: |
+        cd server
+        make
+
+    - name: Build Client
+      run: |
+        cd client
+        make
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v4
+      with:
+        name: dnscat2-binaries
+        path: |
+          server/dnscat2-server
+          client/dnscat2
