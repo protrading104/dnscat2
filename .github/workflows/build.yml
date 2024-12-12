@@ -54,7 +54,7 @@ jobs:
     - name: Install Dependencies
       run: |
         choco install make mingw -y
-        set PATH=C:\MinGW\bin;%PATH%
+        $env:PATH = "C:\MinGW\bin;" + $env:PATH
 
     - name: Build Client
       run: |
