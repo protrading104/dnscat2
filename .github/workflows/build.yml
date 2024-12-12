@@ -54,8 +54,14 @@ jobs:
       run: |
         choco install make mingw -y
         $mingwPath = "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin"
-        $env:PATH = "$mingwPath;$env:PATH"
-        [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH, [System.EnvironmentVariableTarget]::Process)
+        if (-Not (Test-Path $mingwPath)) {
+            Write-Error "MinGW path does not exist: $mingwPath"
+            exit 1
+        }
+        [Environment]::SetEnvironmentVariable("Path", "$mingwPath;"+[Environment]::GetEnvironmentVariable("Path", [EnvironmentVariableTarget]::Process), [EnvironmentVariableTarget]::Process)
+        Write-Host "PATH updated: $env:PATH"
+        refreshenv
+
 
     - name: Build Client
       run: |
