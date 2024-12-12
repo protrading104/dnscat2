@@ -53,7 +53,9 @@ jobs:
     - name: Install Dependencies
       run: |
         choco install make mingw -y
-        $env:PATH = "C:\MinGW\bin;" + $env:PATH
+        $mingwPath = "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin"
+        $env:PATH = "$mingwPath;$env:PATH"
+        [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH, [System.EnvironmentVariableTarget]::Process)
 
     - name: Build Client
       run: |
