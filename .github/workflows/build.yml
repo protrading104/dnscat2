@@ -27,9 +27,6 @@ jobs:
 
     - name: Setup Server
       run: |
-        echo "Current PATH: $PATH"
-        export PATH="$PATH:$(ruby -e 'puts Gem.user_dir')/bin"
-        echo "Updated PATH: $PATH"
         cd server
         $(ruby -e 'puts Gem.user_dir')/bin/bundle install --path vendor/bundle
 
@@ -37,7 +34,7 @@ jobs:
       run: |
         cd client
         make
-    
+
     - name: Debug Client Directory
       run: |
         echo "Contents of client directory:"
@@ -49,4 +46,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dnscat2-client
-        path: client/dnscat2-client
+        path: client/dnscat
