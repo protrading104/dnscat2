@@ -37,6 +37,13 @@ jobs:
       run: |
         cd client
         make
+    
+    - name: Debug Client Directory
+      run: |
+        echo "Contents of client directory:"
+        ls -l client
+        echo "Recursive contents of client directory:"
+        ls -R client
 
     - name: Upload Client Binary
       uses: actions/upload-artifact@v4
