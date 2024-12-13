@@ -44,55 +44,62 @@ jobs:
         name: dnscat2-client-linux
         path: client/dnscat
 
-  build-windows:
-    runs-on: windows-latest
+build-windows:
+  runs-on: windows-latest
 
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+  steps:
+  - name: Checkout Code
+    uses: actions/checkout@v4
 
-    - name: Install Dependencies
-      shell: pwsh
-      run: |
-        # Скачать MinGW
-        $tempPath = "C:\\Temp\\mingw.7z"
-        $destPath = "C:\\MinGW"
-        Invoke-WebRequest -Uri "https://github.com/niXman/mingw-builds-binaries/releases/download/13.2.0-rt_v11-rev0/x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0.7z" -OutFile $tempPath
-        
-        # Распаковать MinGW
-        Expand-Archive -Path $tempPath -DestinationPath $destPath
-        
-        # Убедиться, что директория bin существует
-        $binPath = "$destPath\\bin"
-        if (-Not (Test-Path $binPath)) {
-            Write-Error "Directory $binPath does not exist after extraction!"
-            exit 1
-        }
-        
-        # Обновить PATH
-        $env:PATH = "$binPath;" + $env:PATH
-        [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH, [System.EnvironmentVariableTarget]::Process)
-        Write-Host "PATH updated: $env:PATH"
-    
-        # Проверка установленных инструментов
-        if (-Not (Get-Command "gcc" -ErrorAction SilentlyContinue)) {
-            Write-Error "GCC is not available in PATH!"
-            exit 1
-        }
-        if (-Not (Get-Command "make" -ErrorAction SilentlyContinue)) {
-            Write-Error "Make is not available in PATH!"
-            exit 1
-        }
-        Write-Host "GCC and Make are available."
+  - name: Install Dependencies
+    shell: pwsh
+    run: |
+      $tempPath = "C:\\Temp\\mingw.7z"
+      $destPath = "C:\\MinGW"
 
-    - name: Build Client
-      shell: pwsh
-      run: |
-        cd client
-        make -f Makefile.win
+      Write-Host "Downloading MinGW..."
+      Invoke-WebRequest -Uri "https://github.com/niXman/mingw-builds-binaries/releases/download/13.2.0-rt_v11-rev0/x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0.7z" -OutFile $tempPath
 
-    - name: Upload Windows Client Binary
-      uses: actions/upload-artifact@v4
-      with:
-        name: dnscat2-client-windows
-        path: client/dnscat2-client.exe
+      if (-Not (Test-Path $tempPath)) {
+          Write-Error "Failed to download MinGW archive!"
+          exit 1
+      }
+
+      Write-Host "Extracting MinGW..."
+      Expand-Archive -Path $tempPath -DestinationPath $destPath -Force
+
+      if (-Not (Test-Path "$destPath\\bin")) {
+          Write-Error "MinGW extraction failed! Directory bin does not exist."
+          exit 1
+      }
+
+      Write-Host "Adding MinGW to PATH..."
+      $binPath = "$destPath\\bin"
+      $env:PATH = "$binPath;" + $env:PATH
+      [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH, [System.EnvironmentVariableTarget]::Process)
+      Write-Host "Updated PATH: $env:PATH"
+
+      Write-Host "Checking GCC and Make..."
+      if (-Not (Get-Command "gcc" -ErrorAction SilentlyContinue)) {
+          Write-Error "GCC is not available in PATH!"
+          Write-Host "Current PATH: $env:PATH"
+          exit 1
+      }
+      if (-Not (Get-Command "make" -ErrorAction SilentlyContinue)) {
+          Write-Error "Make is not available in PATH!"
+          Write-Host "Current PATH: $env:PATH"
+          exit 1
+      }
+      Write-Host "GCC and Make are available."
+
+  - name: Build Client
+    shell: pwsh
+    run: |
+      cd client
+      make -f Makefile.win
+
+  - name: Upload Windows Client Binary
+    uses: actions/upload-artifact@v4
+    with:
+      name: dnscat2-client-windows
+      path: client/dnscat2-client.exe
