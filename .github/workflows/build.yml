@@ -99,15 +99,18 @@ jobs:
         }
         
         # Этап 3: Проверка содержимого
-        Write-Host "Step 5: Verifying extraction..."
+                Write-Host "Step 5: Verifying extraction..."
         if (-Not (Test-Path "$destPath\\bin")) {
             Write-Host "Directory 'bin' not found! Checking archive structure..."
             
-            # Выводим список файлов и папок для диагностики
-            Get-ChildItem -Path $destPath -Recurse | ForEach-Object { Write-Host $_.FullName }
+            # Выводим только первые 20 файлов и папок для диагностики
+            Write-Host "Listing first 20 files and directories in $destPath:"
+            Get-ChildItem -Path $destPath -Recurse -Depth 2 -Force | Select-Object -First 20 | ForEach-Object {
+                Write-Host $_.FullName
+            }
         
-            # Ищем папку 'bin' внутри поддиректорий
-            $binDir = Get-ChildItem -Path $destPath -Recurse -Directory | Where-Object { $_.Name -eq "bin" }
+            # Ищем папку 'bin' только на глубине 2 уровня
+            $binDir = Get-ChildItem -Path $destPath -Recurse -Depth 2 -Directory | Where-Object { $_.Name -eq "bin" }
             if ($binDir) {
                 Write-Host "Found 'bin' directory at: $($binDir.FullName). Moving files to root directory..."
                 
