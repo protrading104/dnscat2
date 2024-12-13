@@ -100,41 +100,47 @@ jobs:
         
         # Этап 3: Проверка содержимого
         Write-Host "Step 5: Verifying extraction..."
-        if (-Not (Test-Path "$destPath\\bin")) {
-            Write-Host "Directory 'bin' not found! Checking archive structure..."
-            
-            try {
-                # Выводим первые 20 файлов и папок только из распакованной директории
-                Write-Host "Listing first 20 files and directories in ${destPath}:"
-                Get-ChildItem -Path $destPath -Recurse -Depth 2 -Force -ErrorAction SilentlyContinue | Select-Object -First 20 | ForEach-Object {
-                    Write-Host $_.FullName
-                }
-            } catch {
-                Write-Error "Failed to list files in ${destPath}. Error: $_"
+        # Проверяем, есть ли папка `mingw64\bin` внутри $destPath
+        $binDir = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\mingw64\bin"
+        
+        if (-Not (Test-Path $binDir)) {
+            Write-Host "Directory 'bin' not found at expected path: $binDir. Checking archive structure..."
+        
+            # Выводим первые 20 файлов и папок из распакованной директории
+            Write-Host "Listing first 20 files and directories in ${destPath}:"
+            Get-ChildItem -Path $destPath -Recurse -Force | Select-Object -First 20 | ForEach-Object {
+                Write-Host $_.FullName
             }
         
-            # Ищем папку 'bin' только внутри $destPath
-            $binDir = Get-ChildItem -Path $destPath -Recurse -Depth 2 -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "bin" }
-            if ($binDir) {
-                Write-Host "Found 'bin' directory at: $($binDir.FullName). Moving files to root directory..."
-                
-                try {
-                    # Перемещаем содержимое в корень MinGW
-                    Get-ChildItem -Path $binDir.Parent.FullName | ForEach-Object {
-                        Move-Item -Path $_.FullName -Destination $destPath -Force
-                    }
-        
-                    # Удаляем остаточные папки
-                    Remove-Item -Path $binDir.Parent.FullName -Recurse -Force
-                } catch {
-                    Write-Error "Failed to move files from $($binDir.Parent.FullName). Error: $_"
-                    exit 1
-                }
-            } else {
-                Write-Error "MinGW extraction failed! Could not find 'bin' directory even in subdirectories of ${destPath}."
-                exit 1
-            }
+            # Если структура архива отличается, сообщаем об ошибке
+            Write-Error "MinGW extraction failed! Could not find 'mingw64\\bin' directory."
+            exit 1
         }
+        
+        Write-Host "'bin' directory found at $binDir. Moving necessary files to root ($destPath)..."
+        
+        # Перемещаем содержимое `mingw64` в корень `C:\MinGW`
+        $mingwRoot = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\mingw64"
+        try {
+            Get-ChildItem -Path $mingwRoot | ForEach-Object {
+                Move-Item -Path $_.FullName -Destination $destPath -Force
+            }
+        
+            # Удаляем остаточные папки
+            Remove-Item -Path (Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0") -Recurse -Force
+            Write-Host "Files moved successfully. Cleaned up extracted directories."
+        } catch {
+            Write-Error "Failed to move files from $mingwRoot to $destPath. Error: $_"
+            exit 1
+        }
+        
+        # Проверяем наличие `bin` после перемещения
+        if (-Not (Test-Path "$destPath\bin")) {
+            Write-Error "Final check failed: 'bin' directory not found at $destPath after moving files."
+            exit 1
+        }
+        
+        Write-Host "Extraction and relocation successful. 'bin' directory is now at $destPath\bin."
 
         Write-Host "Extraction successful, 'bin' directory found."
         
