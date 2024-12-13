@@ -99,44 +99,38 @@ jobs:
         }
         
         # Этап 3: Проверка содержимого
-        Write-Host "Step 5: Verifying extraction..."
-        # Проверяем, есть ли папка `mingw64\bin` внутри $destPath
-        $binDir = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\mingw64\bin"
-        
-        if (-Not (Test-Path $binDir)) {
-            Write-Host "Directory 'bin' not found at expected path: $binDir. Checking archive structure..."
-        
-            # Выводим первые 20 файлов и папок из распакованной директории
-            Write-Host "Listing first 20 files and directories in ${destPath}:"
-            Get-ChildItem -Path $destPath -Recurse -Force | Select-Object -First 20 | ForEach-Object {
-                Write-Host $_.FullName
-            }
-        
-            # Если структура архива отличается, сообщаем об ошибке
-            Write-Error "MinGW extraction failed! Could not find 'mingw64\\bin' directory."
-            exit 1
-        }
-        
-        Write-Host "'bin' directory found at $binDir. Moving necessary files to root ($destPath)..."
-        
-        # Перемещаем содержимое `mingw64` в корень `C:\MinGW`
-        $mingwRoot = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\mingw64"
+                Write-Host "Step 5: Verifying extraction..."
         try {
-            Get-ChildItem -Path $mingwRoot | ForEach-Object {
-                Move-Item -Path $_.FullName -Destination $destPath -Force
+            # Проверяем наличие ожидаемой структуры
+            $expectedBinPath = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\mingw64\bin"
+            if (-Not (Test-Path $expectedBinPath)) {
+                Write-Host "Directory 'bin' not found at expected path: $expectedBinPath. Checking archive structure..."
+        
+                # Ограничиваем проверку только корневой папкой и поддиректориями
+                Write-Host "Listing first 20 files and directories in $destPath:"
+                Get-ChildItem -Path $destPath -Directory -ErrorAction SilentlyContinue | Select-Object -First 20 | ForEach-Object {
+                    Write-Host $_.FullName
+                }
+        
+                # Проверяем папку 'mingw64\bin' и перемещаем файлы в корень
+                $mingwRoot = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\mingw64"
+                if (Test-Path $mingwRoot) {
+                    Write-Host "'mingw64' directory found at $mingwRoot. Moving its contents to root..."
+                    Get-ChildItem -Path $mingwRoot | ForEach-Object {
+                        Move-Item -Path $_.FullName -Destination $destPath -Force
+                    }
+                    # Удаляем остаточные директории
+                    Remove-Item -Path (Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0") -Recurse -Force
+                    Write-Host "Files moved successfully."
+                } else {
+                    Write-Error "Directory 'mingw64' not found. Extraction failed."
+                    exit 1
+                }
+            } else {
+                Write-Host "'bin' directory found at the expected path. No further action required."
             }
-        
-            # Удаляем остаточные папки
-            Remove-Item -Path (Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0") -Recurse -Force
-            Write-Host "Files moved successfully. Cleaned up extracted directories."
         } catch {
-            Write-Error "Failed to move files from $mingwRoot to $destPath. Error: $_"
-            exit 1
-        }
-        
-        # Проверяем наличие `bin` после перемещения
-        if (-Not (Test-Path "$destPath\bin")) {
-            Write-Error "Final check failed: 'bin' directory not found at $destPath after moving files."
+            Write-Error "An error occurred during extraction verification. Error: $_"
             exit 1
         }
         
