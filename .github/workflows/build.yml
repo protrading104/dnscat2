@@ -103,31 +103,39 @@ jobs:
         if (-Not (Test-Path "$destPath\\bin")) {
             Write-Host "Directory 'bin' not found! Checking archive structure..."
             
-            # Выводим только первые 20 файлов и папок для диагностики
-            Write-Host "Listing first 20 files and directories in ${destPath}:"
-            Get-ChildItem -Path $destPath -Recurse -Depth 2 -Force | Select-Object -First 20 | ForEach-Object {
-                Write-Host $_.FullName
+            try {
+                # Выводим первые 20 файлов и папок только из распакованной директории
+                Write-Host "Listing first 20 files and directories in ${destPath}:"
+                Get-ChildItem -Path $destPath -Recurse -Depth 2 -Force -ErrorAction SilentlyContinue | Select-Object -First 20 | ForEach-Object {
+                    Write-Host $_.FullName
+                }
+            } catch {
+                Write-Error "Failed to list files in ${destPath}. Error: $_"
             }
         
-            # Ищем папку 'bin' только на глубине 2 уровня
-            $binDir = Get-ChildItem -Path $destPath -Recurse -Depth 2 -Directory | Where-Object { $_.Name -eq "bin" }
+            # Ищем папку 'bin' только внутри $destPath
+            $binDir = Get-ChildItem -Path $destPath -Recurse -Depth 2 -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "bin" }
             if ($binDir) {
                 Write-Host "Found 'bin' directory at: $($binDir.FullName). Moving files to root directory..."
                 
-                # Перемещаем содержимое в корень MinGW
-                Get-ChildItem -Path $binDir.Parent.FullName | ForEach-Object {
-                    Move-Item -Path $_.FullName -Destination $destPath -Force
-                }
+                try {
+                    # Перемещаем содержимое в корень MinGW
+                    Get-ChildItem -Path $binDir.Parent.FullName | ForEach-Object {
+                        Move-Item -Path $_.FullName -Destination $destPath -Force
+                    }
         
-                # Удаляем остаточные папки
-                Remove-Item -Path $binDir.Parent.FullName -Recurse -Force
+                    # Удаляем остаточные папки
+                    Remove-Item -Path $binDir.Parent.FullName -Recurse -Force
+                } catch {
+                    Write-Error "Failed to move files from $($binDir.Parent.FullName). Error: $_"
+                    exit 1
+                }
             } else {
-                Write-Error "MinGW extraction failed! Could not find 'bin' directory even in subdirectories."
+                Write-Error "MinGW extraction failed! Could not find 'bin' directory even in subdirectories of ${destPath}."
                 exit 1
             }
         }
 
-        
         Write-Host "Extraction successful, 'bin' directory found."
         
         # Этап 4: Добавление в PATH
