@@ -57,10 +57,24 @@ jobs:
         $tempPath = "C:\\Temp\\mingw.7z"
         $destPath = "C:\\MinGW"
         $sevenZipPath = "C:\\Program Files\\7-Zip\\7z.exe"
-        
+    
         Write-Host "Step 1: Starting MinGW setup..."
-        
-        # Этап 1: Скачивание архива
+    
+        # Этап 1: Проверка и создание директории $destPath
+        if (-Not (Test-Path $destPath)) {
+            Write-Host "Directory $destPath does not exist. Creating it..."
+            try {
+                New-Item -Path $destPath -ItemType Directory -Force | Out-Null
+                Write-Host "Directory $destPath created successfully."
+            } catch {
+                Write-Error "Failed to create directory $destPath. Error: $_"
+                exit 1
+            }
+        } else {
+            Write-Host "Directory $destPath already exists."
+        }
+    
+        # Этап 2: Скачивание архива
         Write-Host "Step 2: Downloading MinGW..."
         try {
             Invoke-WebRequest -Uri "https://github.com/niXman/mingw-builds-binaries/releases/download/13.2.0-rt_v11-rev0/x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0.7z" -OutFile $tempPath
@@ -69,8 +83,8 @@ jobs:
             Write-Error "Failed to download MinGW archive! Error: $_"
             exit 1
         }
-        
-        # Проверка загрузки файла
+    
+        # Этап 3: Проверка загруженного файла
         Write-Host "Step 3: Verifying downloaded archive..."
         if (-Not (Test-Path $tempPath)) {
             Write-Error "Downloaded file does not exist at $($tempPath)"
@@ -81,8 +95,8 @@ jobs:
             exit 1
         }
         Write-Host "Downloaded archive is valid."
-        
-        # Этап 2: Распаковка архива
+    
+        # Этап 4: Распаковка архива
         Write-Host "Step 4: Extracting MinGW..."
         try {
             if (Test-Path $sevenZipPath) {
@@ -97,33 +111,26 @@ jobs:
             Write-Error "Failed to extract MinGW archive! Error: $_"
             exit 1
         }
-        
-        # Этап 3: Проверка содержимого
+    
+        # Этап 5: Проверка содержимого
         Write-Host "Step 5: Verifying extraction..."
         try {
-            # Проверяем наличие ожидаемой структуры
             $expectedBinPath = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\\mingw64\\bin"
             if (-Not (Test-Path $expectedBinPath)) {
                 Write-Host "Directory 'bin' not found at expected path: $($expectedBinPath). Checking archive structure..."
-                
-                # Ограничиваем проверку только корневой папкой и поддиректориями
+    
+                # Проверка содержимого только $destPath
                 Write-Host "Listing first 20 files and directories in $($destPath):"
-                try {
-                    Get-ChildItem -Path $destPath -Directory -ErrorAction Stop | Select-Object -First 20 | ForEach-Object {
-                        Write-Host $_.FullName
-                    }
-                } catch {
-                    Write-Error "Failed to list files in $($destPath). Error: $_"
+                Get-ChildItem -Path $destPath -Directory -ErrorAction Stop | Select-Object -First 20 | ForEach-Object {
+                    Write-Host $_.FullName
                 }
-                
-                # Проверяем папку 'mingw64' и перемещаем файлы в корень
+    
                 $mingwRoot = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\\mingw64"
                 if (Test-Path $mingwRoot) {
                     Write-Host "'mingw64' directory found at $($mingwRoot). Moving its contents to root..."
                     Get-ChildItem -Path $mingwRoot | ForEach-Object {
                         Move-Item -Path $_.FullName -Destination $destPath -Force
                     }
-                    # Удаляем остаточные директории
                     Remove-Item -Path (Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0") -Recurse -Force
                     Write-Host "Files moved successfully."
                 } else {
@@ -137,8 +144,11 @@ jobs:
             Write-Error "An error occurred during extraction verification. Error: $_"
             exit 1
         }
-        
-        Write-Host "Extraction and relocation successful. 'bin' directory is now at $destPath\bin."
+    
+        Write-Host "Extraction and relocation successful. 'bin' directory is now at $($destPath)\\bin."
+
+
+
 
         Write-Host "Extraction successful, 'bin' directory found."
         
