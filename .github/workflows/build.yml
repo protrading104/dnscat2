@@ -56,41 +56,83 @@ jobs:
       run: |
         $tempPath = "C:\\Temp\\mingw.7z"
         $destPath = "C:\\MinGW"
-  
-        Write-Host "Downloading MinGW..."
-        Invoke-WebRequest -Uri "https://github.com/niXman/mingw-builds-binaries/releases/download/13.2.0-rt_v11-rev0/x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0.7z" -OutFile $tempPath
-  
+        $sevenZipPath = "C:\\Program Files\\7-Zip\\7z.exe"
+        
+        Write-Host "Step 1: Starting MinGW setup..."
+        
+        # Этап 1: Скачивание архива
+        Write-Host "Step 2: Downloading MinGW..."
+        try {
+            Invoke-WebRequest -Uri "https://github.com/niXman/mingw-builds-binaries/releases/download/13.2.0-rt_v11-rev0/x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0.7z" -OutFile $tempPath
+            Write-Host "MinGW archive downloaded successfully to $tempPath"
+        } catch {
+            Write-Error "Failed to download MinGW archive! Error: $_"
+            exit 1
+        }
+        
+        # Проверка загрузки файла
+        Write-Host "Step 3: Verifying downloaded archive..."
         if (-Not (Test-Path $tempPath)) {
-            Write-Error "Failed to download MinGW archive!"
+            Write-Error "Downloaded file does not exist at $tempPath"
             exit 1
         }
-  
-        Write-Host "Extracting MinGW..."
-        Expand-Archive -Path $tempPath -DestinationPath $destPath -Force
-  
+        if ((Get-Item $tempPath).Length -eq 0) {
+            Write-Error "Downloaded file is empty!"
+            exit 1
+        }
+        Write-Host "Downloaded archive is valid."
+        
+        # Этап 2: Распаковка архива
+        Write-Host "Step 4: Extracting MinGW..."
+        try {
+            if (Test-Path $sevenZipPath) {
+                Write-Host "Using 7-Zip for extraction..."
+                & "$sevenZipPath" x $tempPath -o$destPath -y
+            } else {
+                Write-Host "7-Zip not found, using Expand-Archive..."
+                Expand-Archive -Path $tempPath -DestinationPath $destPath -Force
+            }
+            Write-Host "MinGW archive extracted successfully."
+        } catch {
+            Write-Error "Failed to extract MinGW archive! Error: $_"
+            exit 1
+        }
+        
+        # Проверка, что директория bin существует
+        Write-Host "Step 5: Verifying extraction..."
         if (-Not (Test-Path "$destPath\\bin")) {
-            Write-Error "MinGW extraction failed! Directory bin does not exist."
+            Write-Error "MinGW extraction failed! Directory bin does not exist at $destPath."
             exit 1
         }
-  
-        Write-Host "Adding MinGW to PATH..."
+        Write-Host "Extraction successful, bin directory found."
+        
+        # Этап 3: Добавление в PATH
+        Write-Host "Step 6: Adding MinGW to PATH..."
         $binPath = "$destPath\\bin"
-        $env:PATH = "$binPath;" + $env:PATH
-        [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH, [System.EnvironmentVariableTarget]::Process)
-        Write-Host "Updated PATH: $env:PATH"
-  
-        Write-Host "Checking GCC and Make..."
+        try {
+            $env:PATH = "$binPath;" + $env:PATH
+            [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH, [System.EnvironmentVariableTarget]::Process)
+            Write-Host "MinGW successfully added to PATH. Current PATH: $env:PATH"
+        } catch {
+            Write-Error "Failed to update PATH! Error: $_"
+            exit 1
+        }
+        
+        # Этап 4: Проверка наличия gcc и make
+        Write-Host "Step 7: Verifying GCC and Make..."
         if (-Not (Get-Command "gcc" -ErrorAction SilentlyContinue)) {
-            Write-Error "GCC is not available in PATH!"
-            Write-Host "Current PATH: $env:PATH"
+            Write-Error "GCC is not available in PATH! Current PATH: $env:PATH"
             exit 1
         }
+        Write-Host "GCC is available."
         if (-Not (Get-Command "make" -ErrorAction SilentlyContinue)) {
-            Write-Error "Make is not available in PATH!"
-            Write-Host "Current PATH: $env:PATH"
+            Write-Error "Make is not available in PATH! Current PATH: $env:PATH"
             exit 1
         }
-        Write-Host "GCC and Make are available."
+        Write-Host "Make is available."
+        
+        Write-Host "Step 8: MinGW setup completed successfully!"
+
   
     - name: Build Client
       shell: pwsh
