@@ -98,15 +98,35 @@ jobs:
             exit 1
         }
         
-        # Проверка, что директория bin существует
+        # Этап 3: Проверка содержимого
         Write-Host "Step 5: Verifying extraction..."
         if (-Not (Test-Path "$destPath\\bin")) {
-            Write-Error "MinGW extraction failed! Directory bin does not exist at $destPath."
-            exit 1
-        }
-        Write-Host "Extraction successful, bin directory found."
+            Write-Host "Directory 'bin' not found! Checking archive structure..."
+            
+            # Выводим список файлов и папок для диагностики
+            Get-ChildItem -Path $destPath -Recurse | ForEach-Object { Write-Host $_.FullName }
         
-        # Этап 3: Добавление в PATH
+            # Ищем папку 'bin' внутри поддиректорий
+            $binDir = Get-ChildItem -Path $destPath -Recurse -Directory | Where-Object { $_.Name -eq "bin" }
+            if ($binDir) {
+                Write-Host "Found 'bin' directory at: $($binDir.FullName). Moving files to root directory..."
+                
+                # Перемещаем содержимое в корень MinGW
+                Get-ChildItem -Path $binDir.Parent.FullName | ForEach-Object {
+                    Move-Item -Path $_.FullName -Destination $destPath -Force
+                }
+        
+                # Удаляем остаточные папки
+                Remove-Item -Path $binDir.Parent.FullName -Recurse -Force
+            } else {
+                Write-Error "MinGW extraction failed! Could not find 'bin' directory even in subdirectories."
+                exit 1
+            }
+        }
+        
+        Write-Host "Extraction successful, 'bin' directory found."
+        
+        # Этап 4: Добавление в PATH
         Write-Host "Step 6: Adding MinGW to PATH..."
         $binPath = "$destPath\\bin"
         try {
@@ -118,7 +138,7 @@ jobs:
             exit 1
         }
         
-        # Этап 4: Проверка наличия gcc и make
+        # Этап 5: Проверка наличия gcc и make
         Write-Host "Step 7: Verifying GCC and Make..."
         if (-Not (Get-Command "gcc" -ErrorAction SilentlyContinue)) {
             Write-Error "GCC is not available in PATH! Current PATH: $env:PATH"
