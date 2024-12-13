@@ -64,7 +64,7 @@ jobs:
         Write-Host "Step 2: Downloading MinGW..."
         try {
             Invoke-WebRequest -Uri "https://github.com/niXman/mingw-builds-binaries/releases/download/13.2.0-rt_v11-rev0/x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0.7z" -OutFile $tempPath
-            Write-Host "MinGW archive downloaded successfully to $tempPath"
+            Write-Host "MinGW archive downloaded successfully to $($tempPath)"
         } catch {
             Write-Error "Failed to download MinGW archive! Error: $_"
             exit 1
@@ -73,7 +73,7 @@ jobs:
         # Проверка загрузки файла
         Write-Host "Step 3: Verifying downloaded archive..."
         if (-Not (Test-Path $tempPath)) {
-            Write-Error "Downloaded file does not exist at $tempPath"
+            Write-Error "Downloaded file does not exist at $($tempPath)"
             exit 1
         }
         if ((Get-Item $tempPath).Length -eq 0) {
@@ -99,23 +99,27 @@ jobs:
         }
         
         # Этап 3: Проверка содержимого
-                Write-Host "Step 5: Verifying extraction..."
+        Write-Host "Step 5: Verifying extraction..."
         try {
             # Проверяем наличие ожидаемой структуры
-            $expectedBinPath = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\mingw64\bin"
+            $expectedBinPath = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\\mingw64\\bin"
             if (-Not (Test-Path $expectedBinPath)) {
-                Write-Host "Directory 'bin' not found at expected path: $expectedBinPath. Checking archive structure..."
-        
+                Write-Host "Directory 'bin' not found at expected path: $($expectedBinPath). Checking archive structure..."
+                
                 # Ограничиваем проверку только корневой папкой и поддиректориями
-                Write-Host "Listing first 20 files and directories in ${destPath}:"
-                Get-ChildItem -Path $destPath -Directory -ErrorAction SilentlyContinue | Select-Object -First 20 | ForEach-Object {
-                    Write-Host $_.FullName
+                Write-Host "Listing first 20 files and directories in $($destPath):"
+                try {
+                    Get-ChildItem -Path $destPath -Directory -ErrorAction Stop | Select-Object -First 20 | ForEach-Object {
+                        Write-Host $_.FullName
+                    }
+                } catch {
+                    Write-Error "Failed to list files in $($destPath). Error: $_"
                 }
-        
-                # Проверяем папку 'mingw64\bin' и перемещаем файлы в корень
-                $mingwRoot = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\mingw64"
+                
+                # Проверяем папку 'mingw64' и перемещаем файлы в корень
+                $mingwRoot = Join-Path -Path $destPath -ChildPath "x86_64-13.2.0-release-posix-seh-ucrt-rt_v11-rev0\\mingw64"
                 if (Test-Path $mingwRoot) {
-                    Write-Host "'mingw64' directory found at $mingwRoot. Moving its contents to root..."
+                    Write-Host "'mingw64' directory found at $($mingwRoot). Moving its contents to root..."
                     Get-ChildItem -Path $mingwRoot | ForEach-Object {
                         Move-Item -Path $_.FullName -Destination $destPath -Force
                     }
