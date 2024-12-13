@@ -107,7 +107,7 @@ jobs:
                 Write-Host "Directory 'bin' not found at expected path: $expectedBinPath. Checking archive structure..."
         
                 # Ограничиваем проверку только корневой папкой и поддиректориями
-                Write-Host "Listing first 20 files and directories in $destPath:"
+                Write-Host "Listing first 20 files and directories in ${destPath}:"
                 Get-ChildItem -Path $destPath -Directory -ErrorAction SilentlyContinue | Select-Object -First 20 | ForEach-Object {
                     Write-Host $_.FullName
                 }
